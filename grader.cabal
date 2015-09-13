@@ -1,0 +1,53 @@
+name:               grader
+version:            0.1
+synopsis:           Grader for programming assignments
+license:            BSD3
+license-file:       LICENCE
+author:             Kirill Elagin
+maintainer:         kirelagin@gmail.com
+extra-source-files: README
+cabal-version:      >= 1.8
+build-type:         Simple
+
+Source-repository head
+  type: git
+  location: git://github.com/kirelagin/grader.git
+
+
+Library
+    hs-source-dirs: src
+    exposed-modules:
+          Grader
+        , Grader.Course
+        , Grader.Monad
+        , Grader.Paths
+        , Grader.User
+
+    build-depends:
+          aeson
+        , base
+        , containers
+        , directory
+        , email-validate
+        , extra
+        , filepath
+        , gitlib
+        , mtl
+        , text
+        , unix
+        , yaml
+
+    ghc-options: -Wall
+
+Executable status
+    main-is: Status.hs
+
+    build-depends:
+          base
+        , containers
+        , email-validate
+        , grader
+        , mtl
+        , text
+
+    ghc-options: -Wall
