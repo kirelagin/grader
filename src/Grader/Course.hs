@@ -34,7 +34,7 @@ data Course = Course
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-data Alias = Unconditional Text | Conditional (Text -> EmailAddress -> Maybe Text)
+data Alias = Unconditional Text | Conditional (EmailAddress -> Maybe Text)
 
 
 data Test = Foo String String | Bar
@@ -71,7 +71,7 @@ loadCourses path = do
                       target <- readSymbolicLink (path </> p)
                       -- TODO: check that the link does not point outside
                       return $ Unconditional $ pack (takeBaseName target)
-                    else return $ Conditional (\_ _ -> Nothing)  -- TODO
+                    else return $ Conditional (\_ -> Nothing)  -- TODO
 
 
 getCourse :: CourseDB -> Text -> Maybe Course
@@ -84,4 +84,4 @@ findCourse cs as t u = case getCourse cs t of
                                       alias <- M.lookup t as
                                       case alias of
                                         Unconditional name -> getCourse cs name
-                                        Conditional f -> f t u >>= getCourse cs
+                                        Conditional f -> f u >>= getCourse cs
