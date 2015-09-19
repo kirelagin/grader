@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Grader.User
-  ( FirstName, LastName, UserDB
+  ( FirstName, LastName, EmailAddress, UserDB
   , addUser
   , loadUsers
   )
