@@ -17,3 +17,6 @@ aliasesDir = (</> "aliases")
 
 courseDir :: Text -> FilePath -> FilePath
 courseDir course = (</> unpack course) . coursesDir
+
+repoDir :: FilePath -> FilePath
+repoDir = (</> "repo")

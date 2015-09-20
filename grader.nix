@@ -1,5 +1,7 @@
-{ mkDerivation, aeson, base, containers, directory, email-validate
-, extra, filepath, gitlib, mtl, stdenv, text, unix, yaml
+{ mkDerivation, aeson, base, bytestring, containers, directory
+, email-validate, exceptions, extra, filepath, gitlib
+, gitlib-libgit2, monad-control, monad-logger, mtl, stdenv, text
+, time, transformers, transformers-base, unix, yaml
 }:
 mkDerivation {
   pname = "grader";
@@ -7,9 +9,13 @@ mkDerivation {
   src = ./.;
   isLibrary = true;
   isExecutable = true;
-  buildDepends = [
-    aeson base containers directory email-validate extra filepath
-    gitlib mtl text unix yaml
+  libraryHaskellDepends = [
+    aeson base bytestring containers directory email-validate
+    exceptions extra filepath gitlib gitlib-libgit2 monad-control
+    monad-logger mtl text time transformers transformers-base unix yaml
+  ];
+  executableHaskellDepends = [
+    base containers email-validate mtl text
   ];
   description = "Grader for programming assignments";
   license = stdenv.lib.licenses.bsd3;

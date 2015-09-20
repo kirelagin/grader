@@ -26,14 +26,22 @@ Library
     build-depends:
           aeson
         , base
+        , bytestring
         , containers
         , directory
         , email-validate
+        , exceptions
         , extra
         , filepath
         , gitlib
+        , gitlib-libgit2
+        , monad-control
+        , monad-logger
         , mtl
         , text
+        , time
+        , transformers
+        , transformers-base
         , unix
         , yaml
 
