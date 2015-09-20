@@ -19,8 +19,7 @@ getStatus = do
 
 main :: IO ()
 main = do
-    let conf = defaultConf { baseDir = "/tmp/grader" }
-    result <- runExceptT $ evalGrader' conf getStatus
+    result <- runExceptT $ evalGrader' defaultConf getStatus
     case result of
       Left e -> die (show e)
       Right (us, cs, as) -> do

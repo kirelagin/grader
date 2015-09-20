@@ -26,7 +26,7 @@ data GraderConf = GraderConf
   }
 
 defaultConf :: GraderConf
-defaultConf = GraderConf "/usr/lib/grader"
+defaultConf = GraderConf "."
 
 data GraderState = GraderState
   { users   :: UserDB
