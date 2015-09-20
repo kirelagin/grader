@@ -1,9 +1,11 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Grader.User
   ( FirstName, LastName, EmailAddress, UserDB
+  , emailToText
   , addUser
-  , loadUsers
+  , loadUsers, getUserName
   )
   where
 
@@ -19,11 +21,15 @@ type FirstName = Text
 type LastName = Text
 type UserDB = Map EmailAddress (FirstName, LastName)
 
+emailToText :: EmailAddress -> Text
+emailToText = decodeUtf8 . toByteString
+
+
 data UserCreationError = InvalidEmail Text
   deriving Show
 
 instance ToJSON (Map EmailAddress (FirstName, LastName)) where
-  toJSON = toJSON . mapKeys (decodeUtf8 . toByteString)
+  toJSON = toJSON . mapKeys emailToText
 
 instance FromJSON (Map EmailAddress (FirstName, LastName)) where
   parseJSON o = parseJSON o >>= \m -> case runExcept $ checkEmails m of
@@ -42,3 +48,7 @@ addUser email firstName lastName db =
 
 loadUsers :: FilePath -> ExceptT ParseException IO UserDB
 loadUsers = ExceptT . decodeFileEither
+
+
+getUserName :: EmailAddress -> UserDB -> Text
+getUserName email = maybe "unknown" (\(fn, ln) -> fn `T.append` " " `T.append` ln) . M.lookup email

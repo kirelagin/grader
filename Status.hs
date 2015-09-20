@@ -5,9 +5,7 @@ module Main where
 import Control.Monad.Except
 import Data.Map as M (keys)
 import Data.Text as T (Text, unpack)
-import Data.Text.Encoding (decodeUtf8)
 import System.Exit (die)
-import Text.Email.Validate (toByteString)
 
 import Grader
 
@@ -17,7 +15,7 @@ getStatus = do
   us <- gets (keys . users)
   cs <- gets (keys . courses)
   as <- gets (keys . aliases)
-  return (map (decodeUtf8 . toByteString) us, cs, as)
+  return (map emailToText us, cs, as)
 
 main :: IO ()
 main = do
