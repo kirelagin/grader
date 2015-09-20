@@ -2,8 +2,7 @@
 
 module Grader.Course
   ( AliasDB, CourseDB
-  , Course(..), Alias(..)
-  , Test(..)
+  , Course(..), Alias(..), Assignment(..)
   , loadCourses, CoursesLoadError(..)
   , getCourse, findCourse
   )
@@ -29,16 +28,14 @@ import Grader.User
 type CourseDB = Map Text Course
 type AliasDB  = Map Text Alias
 
-data Course = Course
-  { name :: Text
-  }
+data Course = Course Text
   deriving (Show, Generic, ToJSON, FromJSON)
 
 data Alias = Unconditional Text | Conditional (EmailAddress -> Maybe Text)
 
 
-data Test = Foo String String | Bar
-  deriving (Generic, ToJSON)
+data Assignment = Assignment Text Course
+
 
 data CoursesLoadError = LoadingIOError IOError
   deriving Show
@@ -57,7 +54,7 @@ loadCourses path = do
     tryLoad = withExceptT LoadingIOError . ExceptT . try
 
     isAlias :: (FileStatus, FilePath) -> Bool
-    isAlias (s, n) = isSymbolicLink s || (not . isDirectory) s
+    isAlias (s, _) = isSymbolicLink s || (not . isDirectory) s
 
     loadEach :: (FileStatus -> FilePath -> IO a) -> [(FileStatus, FilePath)] -> IO (Map Text a)
     loadEach f = fmap M.fromList . mapM (\(s, p) -> fmap (pack p,) (f s p))
