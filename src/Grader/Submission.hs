@@ -1,9 +1,8 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Grader.Submission
-  ( SubmissionsRepo, openRepo
-  , buildTree, addSubmission
-  , execGit
+  ( buildTree, addSubmission
+  , CommitOid, TreeOid
   )
   where
 
@@ -15,39 +14,30 @@ import Data.Maybe (maybeToList)
 import Data.Text as T (Text, intercalate)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time.LocalTime (getZonedTime)
-import Git
-import Git.Libgit2 (lgFactory, LgRepo)
+import Git hiding (CommitOid, TreeOid)
+import Git.Libgit2
 
 import Grader.Course
 import Grader.Monad
-import Grader.Paths
 import Grader.User
 
 
-type SubmissionsRepo = FilePath
-
-data RepoOpenError = RepoOpenError IOError
-  deriving Show
-
-openRepo :: FilePath -> ExceptT RepoOpenError IO SubmissionsRepo
-openRepo = return
+liftGit :: ReaderT LgRepo (NoLoggingT IO) a -> Grader a
+liftGit = Grader . lift . lift . lift
 
 
-type GitGrader b = ReaderT LgRepo (NoLoggingT Grader) b
-
-
-buildTree :: Map Text ByteString -> GitGrader (TreeOid LgRepo)
-buildTree files = do
+buildTree :: Map Text ByteString -> Grader TreeOid
+buildTree files = liftGit $ do
   files' <- mapM (createBlob . BlobStringLazy) files
   createTree $ forM_ (M.toList files') $ \(path, bOid) -> putBlob (encodeUtf8 path) bOid
 
-addSubmission :: Assignment -> EmailAddress -> TreeOid LgRepo -> Text -> GitGrader (CommitOid LgRepo)
+addSubmission :: Assignment -> EmailAddress -> TreeOid -> Text -> Grader CommitOid
 addSubmission (Assignment an (Course cn)) email tOid msg = do
-  parentOid <- fmap maybeToList $ lookupParent
+  parentOid <- liftGit $ fmap maybeToList $ lookupParent
   now <- liftIO $ getZonedTime
   authorName <- gets (getUserName email . users)
   let sig = Signature authorName (emailToText email) now
-  commit <- createCommit parentOid tOid sig sig msg (Just submissionRef)
+  commit <- liftGit $ createCommit parentOid tOid sig sig msg (Just submissionRef)
   return $ commitOid commit
 
   where
@@ -62,9 +52,3 @@ addSubmission (Assignment an (Course cn)) email tOid msg = do
             CommitObj c -> return (Just $ commitOid c)
             _           -> return Nothing
         Nothing  -> return Nothing
-
-execGit :: GitGrader b -> Grader b
-execGit g = do
-  repoPath <- asks $ repoDir . baseDir
-  let repoOptions = RepositoryOptions repoPath Nothing True True
-  withRepository' lgFactory repoOptions g
