@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Grader.Submission
-  ( buildTree, addSubmission
+  ( GraderGit, withCourseRepo
+  , buildTree, addSubmission
   , CommitOid, TreeOid
   )
   where
@@ -19,29 +20,37 @@ import Git.Libgit2
 
 import Grader.Course
 import Grader.Monad
-import Grader.User
+import Grader.Paths
+import Grader.User (EmailAddress, emailToText)
 
 
-liftGit :: ReaderT LgRepo (NoLoggingT IO) a -> Grader a
-liftGit = Grader . lift . lift . lift
+type GraderGit a = ReaderT LgRepo (NoLoggingT IO) a
+
+--liftGit :: GraderGit a -> Grader a
+--liftGit = Grader . lift . lift . lift
+
+withCourseRepo :: Course -> GraderGit a -> Grader a
+withCourseRepo (Course c) g = do
+  courseRepoPath <- asks (courseDir c . baseDir)
+  let repoOptions = RepositoryOptions courseRepoPath Nothing False True
+  liftIO $ withRepository' lgFactory repoOptions g
 
 
-buildTree :: Map Text ByteString -> Grader TreeOid
-buildTree files = liftGit $ do
+buildTree :: Map Text ByteString -> GraderGit TreeOid
+buildTree files = do
   files' <- mapM (createBlob . BlobStringLazy) files
   createTree $ forM_ (M.toList files') $ \(path, bOid) -> putBlob (encodeUtf8 path) bOid
 
-addSubmission :: Assignment -> EmailAddress -> TreeOid -> Text -> Grader CommitOid
-addSubmission (Assignment an (Course cn)) email tOid msg = do
-  parentOid <- liftGit $ fmap maybeToList $ lookupParent
+addSubmission :: Assignment -> EmailAddress -> Text -> TreeOid -> Text -> GraderGit CommitOid
+addSubmission (Assignment an _) email authorName tOid msg = do
+  parentOid <- fmap maybeToList $ lookupParent
   now <- liftIO $ getZonedTime
-  authorName <- gets (getUserName email . users)
   let sig = Signature authorName (emailToText email) now
-  commit <- liftGit $ createCommit parentOid tOid sig sig msg (Just submissionRef)
+  commit <- createCommit parentOid tOid sig sig msg (Just submissionRef)
   return $ commitOid commit
 
   where
-    submissionRef = T.intercalate "/" ["refs", "submissions", cn, an, emailToText email]
+    submissionRef = T.intercalate "/" ["refs", "submissions", an, emailToText email]
 
     lookupParent = do
       mparentOid <- resolveReference submissionRef
