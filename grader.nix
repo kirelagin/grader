@@ -1,7 +1,6 @@
 { mkDerivation, aeson, base, bytestring, containers, directory
-, email-validate, exceptions, extra, filepath, gitlib
-, gitlib-libgit2, monad-control, monad-logger, mtl, stdenv, text
-, time, transformers, transformers-base, unix, yaml
+, email-validate, filepath, gitlib, gitlib-libgit2, monad-logger
+, mtl, stdenv, text, time, transformers, unix, yaml
 }:
 mkDerivation {
   pname = "grader";
@@ -10,9 +9,9 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base bytestring containers directory email-validate
-    exceptions extra filepath gitlib gitlib-libgit2 monad-control
-    monad-logger mtl text time transformers transformers-base unix yaml
+    aeson base bytestring containers directory email-validate filepath
+    gitlib gitlib-libgit2 monad-logger mtl text time transformers unix
+    yaml
   ];
   executableHaskellDepends = [
     base containers email-validate mtl text
