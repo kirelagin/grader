@@ -11,6 +11,7 @@ module Grader.Monad
   )
   where
 
+import Control.Monad.Except (MonadError)
 import Control.Monad.Trans.Except
 import Control.Monad.Logger (NoLoggingT(..))
 import Control.Monad.Reader
@@ -38,7 +39,7 @@ data GraderState = GraderState
   }
 
 newtype Grader e a = Grader (ReaderT GraderConf (StateT GraderState (ExceptT e (ReaderT LgRepo (NoLoggingT IO)))) a)
-  deriving (Functor, Applicative, Monad, MonadIO, MonadState GraderState, MonadReader GraderConf)
+  deriving (Functor, Applicative, Monad, MonadIO, MonadError e, MonadState GraderState, MonadReader GraderConf)
 
 
 runGrader :: GraderConf -> GraderState -> Grader e a -> ExceptT e IO (a, GraderState)
