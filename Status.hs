@@ -10,7 +10,7 @@ import System.Exit (die)
 import Grader
 
 
-getStatus :: Grader ([Text], [Text], [Text])
+getStatus :: Grader NoError ([Text], [Text], [Text])
 getStatus = do
   us <- gets (keys . users)
   cs <- gets (keys . courses)
@@ -19,7 +19,7 @@ getStatus = do
 
 main :: IO ()
 main = do
-    result <- runExceptT $ evalGrader' defaultConf getStatus
+    result <- runExceptT $ evalGrader'' defaultConf getStatus
     case result of
       Left e -> die (show e)
       Right (us, cs, as) -> do

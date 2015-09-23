@@ -29,7 +29,7 @@ type GraderGit a = ReaderT LgRepo (NoLoggingT IO) a
 --liftGit :: GraderGit a -> Grader a
 --liftGit = Grader . lift . lift . lift
 
-withCourseRepo :: Course -> GraderGit a -> Grader a
+withCourseRepo :: Course -> GraderGit a -> Grader NoError a
 withCourseRepo (Course c) g = do
   courseRepoPath <- asks (courseDir c . baseDir)
   let repoOptions = RepositoryOptions courseRepoPath Nothing False True
