@@ -51,7 +51,7 @@ addSubmission (Assignment an _) email authorName msg tOid = do
   return $ untag (commitOid commit)
 
   where
-    submissionRef = T.intercalate "/" ["refs", "submissions", an, emailToText email]
+    submissionRef = T.intercalate "/" ["refs", "heads", "submissions", an, emailToText email]
     masterRef = T.intercalate "/" ["refs", "heads", "master"]
 
     lookupParent = fmap (listToMaybe . join . fmap maybeToList) $ mapM lookupRef [submissionRef, masterRef]
