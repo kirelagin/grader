@@ -13,7 +13,6 @@ module Grader.Monad
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.Trans.Except
-import Control.Monad.Logger (NoLoggingT(..))
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.Yaml (ParseException)
@@ -38,7 +37,7 @@ data GraderState = GraderState
   , aliases :: AliasDB
   }
 
-newtype Grader e a = Grader (ReaderT GraderConf (StateT GraderState (ExceptT e (ReaderT LgRepo (NoLoggingT IO)))) a)
+newtype Grader e a = Grader (ReaderT GraderConf (StateT GraderState (ExceptT e (ReaderT LgRepo IO))) a)
   deriving (Functor, Applicative, Monad, MonadIO, MonadError e, MonadState GraderState, MonadReader GraderConf)
 
 

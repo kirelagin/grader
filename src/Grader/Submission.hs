@@ -8,7 +8,6 @@ module Grader.Submission
   where
 
 import Control.Monad.Except
-import Control.Monad.Logger (NoLoggingT(..))
 import Data.ByteString.Lazy as BL
 import Data.List as L
 import Data.Map as M
@@ -26,7 +25,7 @@ import Grader.Paths
 import Grader.User (EmailAddress, emailToText)
 
 
-type GraderGit a = ReaderT LgRepo (NoLoggingT IO) a
+type GraderGit a = ReaderT LgRepo IO a
 
 --liftGit :: GraderGit a -> Grader a
 --liftGit = Grader . lift . lift . lift

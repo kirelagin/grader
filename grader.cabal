@@ -34,7 +34,6 @@ Library
         , filepath
         , gitlib
         , gitlib-libgit2
-        , monad-logger
         , mtl
         , tagged
         , text
