@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE EmptyDataDecls, GeneralizedNewtypeDeriving #-}
 
 module Grader.Monad
   ( module Control.Monad.Reader
