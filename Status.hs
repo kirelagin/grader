@@ -2,7 +2,7 @@
 
 module Main where
 
-import Control.Monad.Except
+import Control.Monad.Except (runExceptT)
 import Data.Map as M (keys)
 import Data.Text as T (Text, unpack)
 import System.Exit (die)

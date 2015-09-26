@@ -12,6 +12,7 @@ import Control.Monad.Logger (NoLoggingT(..))
 import Data.ByteString.Lazy as BL
 import Data.Map as M
 import Data.Maybe (maybeToList)
+import Data.Tagged (untag)
 import Data.Text as T (Text, intercalate)
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time.LocalTime (getZonedTime)
@@ -29,7 +30,7 @@ type GraderGit a = ReaderT LgRepo (NoLoggingT IO) a
 --liftGit :: GraderGit a -> Grader a
 --liftGit = Grader . lift . lift . lift
 
-withCourseRepo :: Course -> GraderGit a -> Grader NoError a
+withCourseRepo :: Course -> GraderGit a -> Grader e a
 withCourseRepo (Course c) g = do
   courseRepoPath <- asks (courseDir c . baseDir)
   let repoOptions = RepositoryOptions courseRepoPath Nothing False True
@@ -41,13 +42,13 @@ buildTree files = do
   files' <- mapM (createBlob . BlobStringLazy) files
   createTree $ forM_ (M.toList files') $ \(path, bOid) -> putBlob (encodeUtf8 path) bOid
 
-addSubmission :: Assignment -> EmailAddress -> Text -> TreeOid -> Text -> GraderGit CommitOid
-addSubmission (Assignment an _) email authorName tOid msg = do
+addSubmission :: Assignment -> EmailAddress -> Text -> Text -> TreeOid -> GraderGit OidPtr
+addSubmission (Assignment an _) email authorName msg tOid = do
   parentOid <- fmap maybeToList $ lookupParent
   now <- liftIO $ getZonedTime
   let sig = Signature authorName (emailToText email) now
   commit <- createCommit parentOid tOid sig sig msg (Just submissionRef)
-  return $ commitOid commit
+  return $ untag (commitOid commit)
 
   where
     submissionRef = T.intercalate "/" ["refs", "submissions", an, emailToText email]

@@ -51,8 +51,8 @@ runGrader cnf st (Grader a) = ExceptT $ withRepository' lgFactory repoOptions $ 
 evalGrader :: GraderConf -> GraderState -> Grader e a -> ExceptT e IO a
 evalGrader cnf st g = fmap fst $ runGrader cnf st g
 
-evalGrader' :: GraderConf -> Grader e a -> (GraderInitError -> e) -> ExceptT e IO a
-evalGrader' cnf g initError = do
+evalGrader' :: GraderConf -> (GraderInitError -> e) -> Grader e a -> ExceptT e IO a
+evalGrader' cnf initError g = do
   st <- withExceptT initError $ initGrader cnf
   evalGrader cnf st g
 
