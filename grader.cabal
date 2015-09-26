@@ -21,6 +21,7 @@ Library
         , Grader.Course
         , Grader.Monad
         , Grader.Paths
+        , Grader.Submission
         , Grader.User
 
     build-depends:
@@ -35,6 +36,7 @@ Library
         , gitlib-libgit2
         , monad-logger
         , mtl
+        , tagged
         , text
         , time
         , transformers
@@ -53,5 +55,26 @@ Executable status
         , grader
         , mtl
         , text
+
+    ghc-options: -Wall
+
+Executable receive-mail
+    main-is: src/Grader/Receiver/Mail.hs
+
+    build-depends:
+          base
+        , bytestring
+        , containers
+        , directory
+        , email-validate
+        , encoding
+        , filepath
+        , grader
+        , mime
+        , mtl
+        , sandi
+        , text
+        , text-icu
+        , transformers
 
     ghc-options: -Wall
