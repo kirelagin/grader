@@ -10,8 +10,9 @@ module Grader.Submission
 import Control.Monad.Except
 import Control.Monad.Logger (NoLoggingT(..))
 import Data.ByteString.Lazy as BL
+import Data.List as L
 import Data.Map as M
-import Data.Maybe (maybeToList)
+import Data.Maybe (maybeToList, listToMaybe)
 import Data.Tagged (untag)
 import Data.Text as T (Text, intercalate)
 import Data.Text.Encoding (encodeUtf8)
@@ -52,9 +53,12 @@ addSubmission (Assignment an _) email authorName msg tOid = do
 
   where
     submissionRef = T.intercalate "/" ["refs", "submissions", an, emailToText email]
+    masterRef = T.intercalate "/" ["refs", "heads", "master"]
 
-    lookupParent = do
-      mparentOid <- resolveReference submissionRef
+    lookupParent = fmap (listToMaybe . join . fmap maybeToList) $ mapM lookupRef [submissionRef, masterRef]
+
+    lookupRef ref = do
+      mparentOid <- resolveReference ref
       case mparentOid of
         Just oid -> do
           obj <- lookupObject oid
