@@ -66,7 +66,7 @@ receiveMail to from = do
                       Nothing -> throwError $ CourseNotFound to
                       Just course@(Course cn) -> do
                         (asg, authorName, msg, files) <- processMessage message
-                        liftIO . TIO.putStr $ " for " <> cn <> "/" <> asg <> " by '" <> authorName <> "'"
+                        liftIO . TIO.putStr $ " for " <> cn <> "/" <> asg
                         let msg' = "RAW-ID: " <> rawId <> "\n\n" <> msg
                         cid <- withCourseRepo course $ buildTree files >>= addSubmission (Assignment asg course) email authorName msg'
                         liftIO . TIO.putStrLn $ " at " <> (T.pack . show) cid
