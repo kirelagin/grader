@@ -29,6 +29,7 @@ import System.Environment (getArgs)
 import System.Exit (die)
 import System.FilePath.Posix ((</>), takeFileName, dropExtension)
 import System.IO (openTempFile, hClose)
+import System.Posix.Files (setFileCreationMask, otherModes)
 import Text.Email.Validate (EmailAddress, emailAddress)
 
 import Grader.Course
@@ -46,8 +47,10 @@ main = do
     args <- fmap (L.map T.pack) getArgs
     case args of
       course:from:[] -> do
+        umaskOld <- setFileCreationMask otherModes
         result <- runExceptT . evalGrader' defaultConf InitError $
                     receiveMail course from
+        setFileCreationMask umaskOld
         case result of
           Right () -> return ()
           Left e -> die (show e)

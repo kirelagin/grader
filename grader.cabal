@@ -75,5 +75,6 @@ Executable receive-mail
         , text
         , text-icu
         , transformers
+        , unix
 
     ghc-options: -Wall

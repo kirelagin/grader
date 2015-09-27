@@ -15,7 +15,7 @@ mkDerivation {
   ];
   executableHaskellDepends = [
     base bytestring containers directory email-validate encoding
-    filepath mime mtl sandi text text-icu transformers
+    filepath mime mtl sandi text text-icu transformers unix
   ];
   description = "Grader for programming assignments";
   license = stdenv.lib.licenses.bsd3;
