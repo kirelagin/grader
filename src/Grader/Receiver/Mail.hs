@@ -68,9 +68,9 @@ receiveMail to from = do
       Just email -> case findCourse cdb adb to email of
                       Nothing -> throwError $ CourseNotFound to
                       Just course@(Course cn) -> do
-                        (asg, authorName, msg, files) <- processMessage message
+                        (msgId, asg, authorName, msg, files) <- processMessage message
                         liftIO . TIO.putStr $ " for " <> cn <> "/" <> asg
-                        let msg' = "RAW-ID: " <> rawId <> "\n\n" <> msg
+                        let msg' = "RAW-ID: " <> rawId <> "\nMessage-ID: " <> msgId <> "\n==\n\n" <> msg
                         cid <- withCourseRepo course $ buildTree files >>= addSubmission (Assignment asg course) email authorName msg'
                         liftIO . TIO.putStrLn $ " at " <> (T.pack . show) cid
                         return ()
@@ -86,9 +86,10 @@ receiveMail to from = do
       Prelude.putStr $ "Saved " <> fileName
       return $ (T.pack fileName, decodeUtf8With lenientDecode . BL.toStrict $ mbs)
 
-    processMessage :: Text -> Grader ReceiveMailError (T.Text, T.Text, T.Text, Map T.Text BL.ByteString)
+    processMessage :: Text -> Grader ReceiveMailError (T.Text, T.Text, T.Text, T.Text, Map T.Text BL.ByteString)
     processMessage text = do
         let parsed@(MIMEValue _ _ _ headers _) = parseMIMEMessage text
+        let msgId = maybe "" id $ findParam "Message-ID" headers
         let authorName = maybe "" id $ extractName =<< findParam "From" headers
         let text = maybe "" id $ extractText parsed
         let attachments = extractAttachments parsed
@@ -97,7 +98,7 @@ receiveMail to from = do
                            _ -> case findParam "Subject" headers of
                                   Just subj -> subj
                                   Nothing   -> ""
-        return (T.toLower assignment, authorName, text, attachments)
+        return (msgId, T.toLower assignment, authorName, text, attachments)
 
 findParam :: Text -> [MIMEParam] -> Maybe Text
 findParam field params = fmap decodeWords $ findParamRaw (T.toLower field) params
