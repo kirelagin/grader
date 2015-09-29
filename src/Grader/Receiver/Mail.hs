@@ -6,6 +6,7 @@ import Codec.Binary.Base64 as Base64 (decode)
 import Codec.Binary.QuotedPrintable as QP (decode)
 import Codec.MIME.Parse (parseMIMEMessage)
 import Codec.MIME.Type
+import Control.Monad (msum)
 import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.Trans.Maybe (maybeToExceptT)
 import Control.Monad.State
@@ -17,7 +18,7 @@ import Data.Char as C
 import Data.Encoding
 import Data.List as L
 import Data.Map as M
-import Data.Maybe (listToMaybe, maybeToList)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Text as T
 import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
@@ -89,9 +90,9 @@ receiveMail to from = do
     processMessage :: Text -> Grader ReceiveMailError (T.Text, T.Text, T.Text, T.Text, Map T.Text BL.ByteString)
     processMessage text = do
         let parsed@(MIMEValue _ _ _ headers _) = parseMIMEMessage text
-        let msgId = maybe "" id $ findParam "Message-ID" headers
-        let authorName = maybe "" id $ extractName =<< findParam "From" headers
-        let text = maybe "" id $ extractText parsed
+        let msgId = fromMaybe "" $ findParam "Message-ID" headers
+        let authorName = fromMaybe "" $ extractName =<< findParam "From" headers
+        let text = fromMaybe "" $ extractText parsed
         let attachments = extractAttachments parsed
         let assignment = case M.keys attachments of
                            [fname] -> T.pack . dropExtension . T.unpack $ fname
@@ -174,12 +175,12 @@ extractAttachments val = execState (extract val) M.empty
 
 
 extractText :: MIMEValue -> Maybe T.Text
-extractText val = listToMaybe . join . fmap maybeToList $ [extract isTextPlain, extract isTextHtml, extract isTextAny] <*> pure val
+extractText val = msum $ [extract isTextPlain, extract isTextHtml, extract isTextAny] <*> pure val
   where
     extract :: (Type -> Bool) -> MIMEValue -> Maybe T.Text
     extract pred (MIMEValue tp@(Type _ tparams) mdisp cont _ _) =
       case cont of
-        Multi vals -> listToMaybe . join . fmap maybeToList $ L.map (extract pred) vals
+        Multi vals -> msum $ L.map (extract pred) vals
         Single   t -> let dispOk = case mdisp of
                                      Nothing -> True
                                      Just (Disposition DispInline _) -> True
