@@ -101,16 +101,19 @@ receiveMail to from = do
         return (msgId, T.toLower assignment, authorName, text, attachments)
 
 findParam :: Text -> [MIMEParam] -> Maybe Text
-findParam field params = fmap decodeWords $ findParamRaw (T.toLower field) params
+findParam field params = fmap decodeByteWords $ findParamRaw (T.toLower field) params
   where
     findParamRaw :: Text -> [MIMEParam] -> Maybe BS.ByteString
     findParamRaw field params = fmap encodeUtf8 $ L.lookup field $ L.map (\(MIMEParam n v) -> (n, v)) params
 
     ------------------------
 
-    decodeWords :: BS.ByteString -> Text
-    decodeWords = T.pack . decodeWords' . T.unpack . decodeUtf8With lenientDecode
+decodeByteWords :: BS.ByteString -> Text
+decodeByteWords = decodeWords . decodeUtf8With lenientDecode
 
+decodeWords :: Text -> Text
+decodeWords = T.pack . decodeWords' . T.unpack
+  where
     -- Stolen from Codec.MIME.Decode
     decodeWord' :: String -> Maybe (String, String)
     decodeWord' str =
@@ -158,14 +161,16 @@ extractAttachments val = execState (extract val) M.empty
       case cont of
         Multi vals -> mapM_ extract vals
         Single t   -> case mdisp of
-                        Just (Disposition DispAttachment params) -> case getDispFilename params of
+                        Just (Disposition DispAttachment params) -> case getDispFilename params tparams of
                                                                       Just "signature.asc" -> return ()
                                                                       Just fn -> modify $ M.insert fn (LC8.pack . T.unpack $ t)
                                                                       _ -> return ()
                         _ -> return ()
-    getDispFilename (Filename t : _) = Just t
-    getDispFilename (x : rest)       = getDispFilename rest
-    getDispFilename []               = Nothing
+    getDispFilename (Filename t : _) _ = Just (decodeWords t)
+    getDispFilename (x : rest) tparams = getDispFilename rest tparams
+    getDispFilename [] tparams         = getParamFilename tparams
+
+    getParamFilename = findParam "name"
 
 
 extractText :: MIMEValue -> Maybe T.Text
