@@ -24,6 +24,11 @@ Library
         , Grader.Submission
         , Grader.User
 
+        , Codec.MIME.Decode
+        , Codec.MIME.Parse
+        , Codec.MIME.Type
+        , Codec.MIME.Utils
+
     build-depends:
           aeson
         , base
@@ -41,6 +46,9 @@ Library
         , transformers
         , unix
         , yaml
+
+        , encoding
+        , sandi
 
     ghc-options: -Wall
 
@@ -69,9 +77,7 @@ Executable receive-mail
         , encoding
         , filepath
         , grader
-        , mime
         , mtl
-        , sandi
         , text
         , text-icu
         , transformers

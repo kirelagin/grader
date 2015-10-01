@@ -10,7 +10,6 @@ module Grader.Submission
 import Control.Monad (msum)
 import Control.Monad.Except
 import Data.ByteString.Lazy as BL
-import Data.List as L
 import Data.Map as M
 import Data.Maybe (maybeToList)
 import Data.Tagged (untag)

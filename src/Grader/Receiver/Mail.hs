@@ -2,20 +2,15 @@
 
 module Main where
 
-import Codec.Binary.Base64 as Base64 (decode)
-import Codec.Binary.QuotedPrintable as QP (decode)
+import Codec.MIME.Decode (fromCharset, decodeWords)
 import Codec.MIME.Parse (parseMIMEMessage)
 import Codec.MIME.Type
 import Control.Monad (msum)
 import Control.Monad.Except (runExceptT, throwError)
-import Control.Monad.Trans.Maybe (maybeToExceptT)
 import Control.Monad.State
 import Data.ByteString as BS
-import Data.ByteString.Char8 as C8
 import Data.ByteString.Lazy as BL
-import Data.ByteString.Lazy.Char8 as LC8
 import Data.Char as C
-import Data.Encoding
 import Data.List as L
 import Data.Map as M
 import Data.Maybe (fromMaybe)
@@ -31,7 +26,7 @@ import System.Exit (die)
 import System.FilePath.Posix ((</>), takeFileName, dropExtension)
 import System.IO (openTempFile, hClose)
 import System.Posix.Files (setFileCreationMask, otherModes)
-import Text.Email.Validate (EmailAddress, emailAddress)
+import Text.Email.Validate (emailAddress)
 
 import Grader.Course
 import Grader.Monad
@@ -51,7 +46,7 @@ main = do
         umaskOld <- setFileCreationMask otherModes
         result <- runExceptT . evalGrader' defaultConf InitError $
                     receiveMail course from
-        setFileCreationMask umaskOld
+        _ <- setFileCreationMask umaskOld
         case result of
           Right () -> return ()
           Left e -> die (show e)
@@ -76,7 +71,7 @@ receiveMail to from = do
                         liftIO . TIO.putStrLn $ " at " <> (T.pack . show) cid
                         return ()
   where
-    saveRaw :: T.Text -> FilePath -> IO (Text, Text)
+    saveRaw :: T.Text -> FilePath -> IO (Text, BL.ByteString)
     saveRaw course dir = do
       createDirectoryIfMissing True dir
       (n, h) <- openTempFile dir (T.unpack course ++ "-")
@@ -85,9 +80,9 @@ receiveMail to from = do
       hClose h
       let fileName = takeFileName n
       Prelude.putStr $ "Saved " <> fileName
-      return $ (T.pack fileName, decodeUtf8With lenientDecode . BL.toStrict $ mbs)
+      return $ (T.pack fileName, mbs)
 
-    processMessage :: Text -> Grader ReceiveMailError (T.Text, T.Text, T.Text, T.Text, Map T.Text BL.ByteString)
+    processMessage :: BL.ByteString -> Grader ReceiveMailError (T.Text, T.Text, T.Text, T.Text, Map T.Text BL.ByteString)
     processMessage text = do
         let parsed@(MIMEValue _ _ _ headers _) = parseMIMEMessage text
         let msgId = fromMaybe "" $ findParam "Message-ID" headers
@@ -102,57 +97,8 @@ receiveMail to from = do
         return (msgId, T.toLower assignment, authorName, text, attachments)
 
 findParam :: Text -> [MIMEParam] -> Maybe Text
-findParam field params = fmap decodeByteWords $ findParamRaw (T.toLower field) params
-  where
-    findParamRaw :: Text -> [MIMEParam] -> Maybe BS.ByteString
-    findParamRaw field params = fmap encodeUtf8 $ L.lookup field $ L.map (\(MIMEParam n v) -> (n, v)) params
+findParam field params = fmap decodeWords $ L.lookup (T.toLower field) $ L.map (\(MIMEParam n v) -> (n, v)) params
 
-    ------------------------
-
-decodeByteWords :: BS.ByteString -> Text
-decodeByteWords = decodeWords . decodeUtf8With lenientDecode
-
-decodeWords :: Text -> Text
-decodeWords = T.pack . decodeWords' . T.unpack
-  where
-    -- Stolen from Codec.MIME.Decode
-    decodeWord' :: String -> Maybe (String, String)
-    decodeWord' str =
-        case str of
-        '=':'?':xs ->
-          case dropLang $ L.break (\ch -> ch =='?' || ch == '*') xs of
-            (cs,_:x:'?':bs) ->
-                case C.toLower x of
-                  'q' -> decode QP.decode cs (L.break (=='?') bs)
-                  'b' -> decode Base64.decode cs (L.break (=='?') bs)
-                  _   -> Nothing
-            _ -> Nothing
-        _ -> Nothing
-      where
-        -- ignore RFC 2231 extension of permitting a language tag to be supplied
-        -- after the charset.
-        dropLang (as,'*':bs) = (as, L.dropWhile (/='?') bs)
-        dropLang (as,bs) = (as,bs)
-
-        decode cd cset (fs,'?':'=':rs) = case cd (encodeUtf8 . T.pack $ fs) of
-                                          Left _ -> Nothing
-                                          Right res -> fmap (, rs) $ fromCharset cset res
-        decode _ _ _ = Nothing
-
-    decodeWords' :: String -> String
-    decodeWords' "" = ""
-    decodeWords' (x:xs) | isSpace x = x : decodeWords' xs
-                        | otherwise =
-                          case decodeWord' (x:xs) of
-                            Nothing -> x : decodeWords' xs
-                            Just (as,bs) -> as ++ decodeWords' bs
-
-fromCharset :: String -> BS.ByteString -> Maybe String
-fromCharset cset bs = do
-  enc <- encodingFromStringExplicit cset
-  case decodeStrictByteStringExplicit enc bs of
-    Left _ -> Nothing
-    Right r -> Just r
 
 extractAttachments :: MIMEValue -> M.Map T.Text BL.ByteString
 extractAttachments val = execState (extract val) M.empty
@@ -164,11 +110,11 @@ extractAttachments val = execState (extract val) M.empty
         Single t   -> case mdisp of
                         Just (Disposition DispAttachment params) -> case getDispFilename params tparams of
                                                                       Just "signature.asc" -> return ()
-                                                                      Just fn -> modify $ M.insert fn (LC8.pack . T.unpack $ t)
+                                                                      Just fn -> modify $ M.insert fn t
                                                                       _ -> return ()
                         _ -> return ()
     getDispFilename (Filename t : _) _ = Just (decodeWords t)
-    getDispFilename (x : rest) tparams = getDispFilename rest tparams
+    getDispFilename (_ : rest) tparams = getDispFilename rest tparams
     getDispFilename [] tparams         = getParamFilename tparams
 
     getParamFilename = findParam "name"
@@ -199,13 +145,13 @@ extractText val = msum $ [extract isTextPlain, extract isTextHtml, extract isTex
     isTextAny (Type (Text _) _) = True
     isTextAny _ = False
 
-    tryDecodeText :: [MIMEParam] -> T.Text -> T.Text
-    tryDecodeText (MIMEParam "charset" charset : _) = tryDecode (T.unpack charset) . C8.pack . T.unpack
+    tryDecodeText :: [MIMEParam] -> BL.ByteString -> T.Text
+    tryDecodeText (MIMEParam "charset" charset : _) = tryDecode (T.unpack charset) . BL.toStrict
       where tryDecode cset bs = case fromCharset cset bs of
                                   Just t  -> T.pack t
                                   Nothing -> decodeUtf8With lenientDecode $ bs
     tryDecodeText (_ : rest) = tryDecodeText rest
-    tryDecodeText [] = id
+    tryDecodeText [] = decodeUtf8With lenientDecode . BL.toStrict
 
 extractName :: T.Text -> Maybe T.Text
 extractName from = TICU.find (TICU.regex [] "^(?:^|(.*?)\\s+)<\\S+>$") from >>= TICU.group 1
