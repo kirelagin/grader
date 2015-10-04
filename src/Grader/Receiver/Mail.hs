@@ -36,6 +36,7 @@ import Grader.Submission
 data ReceiveMailError = InitError GraderInitError
                       | InvalidFrom T.Text
                       | CourseNotFound T.Text
+                      | AssignmentNotFound T.Text
   deriving Show
 
 main :: IO()
@@ -59,17 +60,18 @@ receiveMail to from = do
     adb <- gets aliases
     rawPath <- asks ((</> "raw-mail") . baseDir)
     (rawId, message) <- liftIO $ saveRaw to rawPath
+    liftIO $ TIO.putStr ". "
     case emailAddress $ encodeUtf8 from of
       Nothing -> throwError $ InvalidFrom from
       Just email -> case findCourse cdb adb to email of
                       Nothing -> throwError $ CourseNotFound to
                       Just course@(Course cn) -> do
                         (msgId, asg, authorName, msg, files) <- processMessage message
-                        liftIO . TIO.putStr $ " for " <> cn <> "/" <> asg
                         let msg' = "RAW-ID: " <> rawId <> "\nMessage-ID: " <> msgId <> "\n==\n\n" <> msg
-                        cid <- withCourseRepo course $ buildTree files >>= addSubmission (Assignment asg course) email authorName msg'
-                        liftIO . TIO.putStrLn $ " at " <> (T.pack . show) cid
-                        return ()
+                        mCid <- withCourseRepo course $ buildTree files >>= addSubmission (Assignment asg course) email authorName msg'
+                        case mCid of
+                          Just cid -> liftIO . TIO.putStrLn $ "Commited for " <> cn <> "/" <> asg <> " at " <> (T.pack . show) cid
+                          Nothing  -> throwError $ AssignmentNotFound asg
   where
     saveRaw :: T.Text -> FilePath -> IO (Text, BL.ByteString)
     saveRaw course dir = do

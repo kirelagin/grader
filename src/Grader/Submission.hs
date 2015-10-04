@@ -42,17 +42,20 @@ buildTree files = do
   files' <- mapM (createBlob . BlobStringLazy) files
   createTree $ forM_ (M.toList files') $ \(path, bOid) -> putBlob (encodeUtf8 path) bOid
 
-addSubmission :: Assignment -> EmailAddress -> Text -> Text -> TreeOid -> GraderGit OidPtr
+addSubmission :: Assignment -> EmailAddress -> Text -> Text -> TreeOid -> GraderGit (Maybe OidPtr)
 addSubmission (Assignment an _) email authorName msg tOid = do
-  parentOid <- fmap maybeToList $ lookupParent
-  now <- liftIO $ getZonedTime
-  let sig = Signature authorName (emailToText email) now
-  commit <- createCommit parentOid tOid sig sig msg (Just submissionRef)
-  return $ untag (commitOid commit)
+  mParentOid <- lookupParent
+  case mParentOid of
+    Just pOid -> do
+      now <- liftIO $ getZonedTime
+      let sig = Signature authorName (emailToText email) now
+      commit <- createCommit [pOid] tOid sig sig msg (Just submissionRef)
+      return . Just $ untag (commitOid commit)
+    Nothing -> return Nothing
 
   where
     submissionRef = T.intercalate "/" ["refs", "heads", "submissions", an, emailToText email]
-    masterRef = T.intercalate "/" ["refs", "heads", "master"]
+    masterRef = T.intercalate "/" ["refs", "heads", "assignments", an]
 
     lookupParent = fmap msum $ mapM lookupRef [submissionRef, masterRef]
 
