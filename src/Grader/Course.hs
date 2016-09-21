@@ -15,7 +15,7 @@ import Data.Map as M (Map, fromList, lookup)
 import Data.Text as T (Text, pack)
 import Data.Yaml as Y
 import GHC.Generics
-import System.Directory
+import System.Directory (getDirectoryContents)
 import System.FilePath.Posix ((</>), takeBaseName)
 import System.Posix.Files (FileStatus, getSymbolicLinkStatus
                           , isDirectory, isSymbolicLink

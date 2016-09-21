@@ -23,7 +23,6 @@ module Codec.MIME.Parse
 
 import Codec.MIME.Type
 import Codec.MIME.Decode
-import Control.Arrow (second)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as B
