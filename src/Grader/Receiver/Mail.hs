@@ -36,6 +36,8 @@ import Grader.Submission
 data ReceiveMailError = InitError GraderInitError
                       | InvalidFrom T.Text
                       | CourseNotFound T.Text
+                      | NoAttachment
+                      | TooManyAttachments
                       | AssignmentNotFound T.Text
   deriving Show
 
@@ -91,11 +93,10 @@ receiveMail to from = do
         let authorName = fromMaybe "" $ extractName =<< findParam "From" headers
         let text = fromMaybe "" $ extractText parsed
         let attachments = extractAttachments parsed
-        let assignment = case M.keys attachments of
-                           [fname] -> T.pack . dropExtension . T.unpack $ fname
-                           _ -> case findParam "Subject" headers of
-                                  Just subj -> subj
-                                  Nothing   -> ""
+        assignment <- case M.keys attachments of
+                        []      -> throwError $ NoAttachment
+                        [fname] -> return $ T.pack . dropExtension . T.unpack $ fname
+                        _       -> throwError $ TooManyAttachments
         return (msgId, T.toLower assignment, authorName, text, attachments)
 
 findParam :: Text -> [MIMEParam] -> Maybe Text
