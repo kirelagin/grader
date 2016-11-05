@@ -97,7 +97,7 @@ receiveMail to from = do
                         []      -> throwError $ NoAttachment
                         [fname] -> return $ T.pack . dropExtension . T.unpack $ fname
                         _       -> throwError $ TooManyAttachments
-        return (msgId, T.toLower assignment, authorName, text, attachments)
+        return (msgId, assignment, authorName, text, attachments)
 
 findParam :: Text -> [MIMEParam] -> Maybe Text
 findParam field params = fmap decodeWords $ L.lookup (T.toLower field) $ L.map (\(MIMEParam n v) -> (n, v)) params
